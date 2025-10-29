@@ -1,0 +1,14 @@
+Soil_Type,Retention_Capacity,Preferred_Utilization,Notes
+Alluvial Soil,High,Compost,Biofertilizer
+Black (Regur) Soil,Very High,Compost,Biochar
+Red Soil,Medium,Compost,Mulching
+Laterite Soil,Low,Biochar,Mulching
+Arid (Desert) Soil,Very Low,Compost,Irrigation Improvement
+Saline and Alkaline Soil,Low,Biochar,Gypsum Treatment
+Peaty and Marshy Soil,Very High,Compost,Biogas
+Forest and Mountain Soil,Medium,Compost,Mulching
+Loamy Soil,High,Compost,Biofertilizer
+Sandy Soil,Very Low,Compost,Mulching
+Clayey Soil,High,Compost,Biochar
+Coastal Alluvial Soil,High,Compost,Mulching
+Lateritic Gravel Soil,Low,Biochar,Mulching

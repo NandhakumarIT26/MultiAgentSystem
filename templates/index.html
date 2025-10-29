@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <style>
+    body {
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.card {
+  border-radius: 12px;
+}
+
+pre {
+  background: #f8f9fa;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Residue Utilization Planner</title>
+
+  <!-- Bootstrap for styling -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body class="bg-light">
+  <div class="container py-5">
+    <h2 class="text-center mb-4 text-primary fw-bold">🌾 Residue Utilization Planning System</h2>
+
+    <!-- Input Form -->
+    <div class="card shadow p-4 mb-4">
+      <h5 class="mb-3">Enter Crop & Soil Details</h5>
+      <form id="plannerForm">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="crop" class="form-label">Crop Type</label>
+            <input type="text" class="form-control" id="crop" placeholder="e.g. Rice" required>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="yield" class="form-label">Crop Yield (Tonnes)</label>
+            <input type="number" class="form-control" id="yield" step="0.1" placeholder="e.g. 6.2" required>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="residue" class="form-label">Residue Amount (Tonnes)</label>
+            <input type="number" class="form-control" id="residue" step="0.1" placeholder="e.g. 8.5" required>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="soil" class="form-label">Soil Type</label>
+            <select class="form-select" id="soil" required>
+              <option value="">Select Soil Type</option>
+              <option value="">Select Soil Type</option>
+  <option value="Loam">Alluvial Soil</option>
+  <option value="Clay">Black (Regur) Soil</option>
+  <option value="Loam">Red Soil</option>
+  <option value="Loam">Laterite Soil</option>
+  <option value="Sandy">Arid (Desert) Soil</option>
+  <option value="Loam">Saline and Alkaline Soil</option>
+  <option value="Clay">Peaty and Marshy Soil</option>
+  <option value="Loam">Forest and Mountain Soil</option>
+  <option value="Loam">Loamy Soil</option>
+  <option value="Sandy">Sandy Soil</option>
+  <option value="Clay">Clayey Soil</option>
+  <option value="Loam">Coastal Alluvial Soil</option>
+  <option value="Sandy">Lateritic Gravel Soil</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label for="location" class="form-label">Location</label>
+          <input type="text" class="form-control" id="location" placeholder="e.g. Thanjavur, Tamil Nadu" required>
+        </div>
+
+        <div class="text-center">
+          <button type="submit" class="btn btn-success px-5">Generate Plan</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Output Display -->
+    <div id="outputSection" class="card shadow p-4" style="display:none;">
+      <h5 class="mb-3 text-primary">📊 Generated Utilization Plan</h5>
+      <div id="results" class="mb-4"></div>
+      <canvas id="planChart" height="120"></canvas>
+    </div>
+  </div>
+
+  <!-- JS Logic -->
+  <script>
+    const form = document.getElementById("plannerForm");
+    const outputSection = document.getElementById("outputSection");
+    const resultDiv = document.getElementById("results");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const data = {
+        crop: document.getElementById("crop").value,
+        yield_t_per_ha: parseFloat(document.getElementById("yield").value),
+        residue_tonnes: parseFloat(document.getElementById("residue").value),
+        soil: document.getElementById("soil").value,
+        location: document.getElementById("location").value
+      };
+
+      resultDiv.innerHTML = "<p class='text-center text-secondary'>⏳ Generating plan, please wait...</p>";
+
+      try {
+        const response = await fetch("/plan", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+
+        if (!response.ok) throw new Error("Server error");
+
+        const res = await response.json();
+        outputSection.style.display = "block";
+
+        const initial = res.Initial_Plan || {};
+        const final = res.Final_Output?.Final_Optimized_Plan || {};
+        const reasoning = res.Final_Output?.Optimizer_Reasoning || "No reasoning available";
+
+        resultDiv.innerHTML = `
+          <h6><strong>Initial Plan:</strong></h6>
+          <pre>${JSON.stringify(initial, null, 2)}</pre>
+          <h6><strong>Optimized Plan:</strong></h6>
+          <pre>${JSON.stringify(final, null, 2)}</pre>
+          <h6><strong>Optimizer Reasoning:</strong></h6>
+          <p>${reasoning}</p>
+        `;
+
+        // Draw chart
+        const ctx = document.getElementById('planChart').getContext('2d');
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: Object.keys(final),
+            datasets: [{
+              label: 'Residue Allocation (%)',
+              data: Object.values(final),
+              backgroundColor: ['#28a745','#007bff','#ffc107','#dc3545']
+            }]
+          },
+          options: { scales: { y: { beginAtZero: true, max: 100 } } }
+        });
+
+      } catch (err) {
+        resultDiv.innerHTML = `<p class="text-danger text-center">❌ ${err.message}</p>`;
+      }
+    });
+  </script>
+</body>
+</html>

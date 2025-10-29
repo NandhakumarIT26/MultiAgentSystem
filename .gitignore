@@ -1,0 +1,8 @@
+.env
+*.env
+
+# Optional but recommended
+__pycache__/
+*.pyc
+venv/
+

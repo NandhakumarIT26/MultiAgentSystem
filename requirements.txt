@@ -1,0 +1,4 @@
+flask
+pandas
+python-dotenv
+openai                 # optional; used if you plug OpenAI
