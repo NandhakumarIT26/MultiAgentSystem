@@ -123,15 +123,19 @@ pre {
         const res = await response.json();
         outputSection.style.display = "block";
 
+        const inputObj = res.Input || {};
         const initial = res.Initial_Plan || {};
-        const final = res.Final_Output?.Final_Optimized_Plan || {};
-        const reasoning = res.Final_Output?.Optimizer_Reasoning || "No reasoning available";
+        const fullFinal = res.Final_Output || {};
+        const final = fullFinal?.Final_Optimized_Plan || {};
+        const reasoning = fullFinal?.Optimizer_Reasoning || "No reasoning available";
 
         resultDiv.innerHTML = `
+          <h6><strong>Input:</strong></h6>
+          <pre>${JSON.stringify(inputObj, null, 2)}</pre>
           <h6><strong>Initial Plan:</strong></h6>
           <pre>${JSON.stringify(initial, null, 2)}</pre>
-          <h6><strong>Optimized Plan:</strong></h6>
-          <pre>${JSON.stringify(final, null, 2)}</pre>
+          <h6><strong>Optimizer Output (full, as in terminal):</strong></h6>
+          <pre>${JSON.stringify(fullFinal, null, 2)}</pre>
           <h6><strong>Optimizer Reasoning:</strong></h6>
           <p>${reasoning}</p>
         `;

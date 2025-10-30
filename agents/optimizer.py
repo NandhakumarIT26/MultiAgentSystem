@@ -3,7 +3,7 @@ import json
 from core.llm_adapter import llm_call_system
 from core.kb_loader import load_regional_data, load_policy_data, load_crop_data
 
-def optimize_plan(initial_plan_obj):
+def optimizer_agent(initial_plan_obj):
     """
     initial_plan_obj: dict containing plan, user_input, possibly reasoning
     Returns final optimized plan dict

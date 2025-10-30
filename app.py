@@ -3,8 +3,8 @@ from flask import Flask, request, jsonify, render_template
 from datetime import datetime
 import pandas as pd
 from core.config import FEEDBACK_CSV, HOST, PORT, DEBUG
-from agents.planner import planner_generate_initial_plan, build_context
-from agents.optimizer import optimize_plan
+from agents.planner import planner_agent, build_context
+from agents.optimizer import optimizer_agent
 import json
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
@@ -29,7 +29,7 @@ def plan_route():
         "location": data["location"]
     }
     # Planner
-    initial = planner_generate_initial_plan(user_input)
+    initial = planner_agent(user_input)
     # If planner returned plan in different format, wrap
     if "plan" not in initial:
         initial = {"plan": initial, "user_input": user_input}
@@ -38,7 +38,7 @@ def plan_route():
     initial["user_input"] = user_input
 
     # Optimizer
-    final = optimize_plan(initial)
+    final = optimizer_agent(initial)
     print(final)
     # Compose user-facing output
     output = {

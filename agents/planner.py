@@ -34,7 +34,7 @@ def build_context(user_input):
     }
     return context
 
-def planner_generate_initial_plan(user_input):
+def planner_agent(user_input):
     context = build_context(user_input)
     # craft a prompt for the LLM using context
     prompt = f"""
