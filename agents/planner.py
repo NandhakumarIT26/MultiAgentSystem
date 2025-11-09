@@ -39,7 +39,7 @@ def planner_agent(user_input):
     # craft a prompt for the LLM using context
     prompt = f"""
 You are an agricultural residue planner. Use this context to generate an initial residue utilization allocation.
-Context: {json.dumps(context, indent=2)}
+Context: {json.dumps(context, indent=2)} 
 Return JSON with keys: plan (percentages sum to 100), reasoning (text), confidence (0-1).
 """
     resp_text = llm_call_system(prompt)

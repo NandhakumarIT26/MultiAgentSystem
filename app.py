@@ -40,10 +40,15 @@ def plan_route():
     # Optimizer
     final = optimizer_agent(initial)
     print(final)
-    # Compose user-facing output
+    # Compose user-facing output - send full initial object (with plan, reasoning, confidence)
+    initial_plan_data = {
+        "plan": initial.get("plan", {}),
+        "reasoning": initial.get("reasoning", "No reasoning provided"),
+        "confidence": initial.get("confidence", 0)
+    }
     output = {
         "Input": user_input,
-        "Initial_Plan": initial.get("plan"),
+        "Initial_Plan": initial_plan_data,
         "Final_Output": final
     }
     return jsonify(output)

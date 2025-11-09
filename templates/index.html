@@ -88,7 +88,9 @@ pre {
     <div id="outputSection" class="card shadow p-4" style="display:none;">
       <h5 class="mb-3 text-primary">📊 Generated Utilization Plan</h5>
       <div id="results" class="mb-4"></div>
-      <canvas id="planChart" height="120"></canvas>
+      <div class="text-center">
+        <canvas id="planChart" style="max-width: 400px; max-height: 250px;"></canvas>
+      </div>
     </div>
   </div>
 
@@ -97,6 +99,7 @@ pre {
     const form = document.getElementById("plannerForm");
     const outputSection = document.getElementById("outputSection");
     const resultDiv = document.getElementById("results");
+    let planChartInstance = null; // Store chart instance
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -128,31 +131,173 @@ pre {
         const fullFinal = res.Final_Output || {};
         const final = fullFinal?.Final_Optimized_Plan || {};
         const reasoning = fullFinal?.Optimizer_Reasoning || "No reasoning available";
+        const sustainability = fullFinal?.Sustainability_Impact || {};
+        const economic = fullFinal?.Economic_Impact || {};
+        const confidence = fullFinal?.Confidence_Score || 0;
+        const initialPlan = initial?.plan || {};
+        const initialReasoning = initial?.reasoning || "No reasoning provided";
+
+        // Format input data
+        const formatInput = () => {
+          return `
+            <div class="mb-3">
+              <strong>Crop Type:</strong> ${inputObj.crop || 'N/A'}<br>
+              <strong>Yield per Hectare:</strong> ${inputObj.yield_t_per_ha || 'N/A'} tonnes<br>
+              <strong>Residue Amount:</strong> ${inputObj.residue_tonnes || 'N/A'} tonnes<br>
+              <strong>Soil Type:</strong> ${inputObj.soil || 'N/A'}<br>
+              <strong>Location:</strong> ${inputObj.location || 'N/A'}
+            </div>
+          `;
+        };
+
+        // Format allocation plan
+        const formatAllocation = (plan, title) => {
+          if (!plan || Object.keys(plan).length === 0) {
+            return `<p class="text-muted">No allocation data available</p>`;
+          }
+          let html = `<div class="table-responsive mb-3"><table class="table table-bordered table-sm">`;
+          html += `<thead class="table-light"><tr><th>Method</th><th>Allocation (%)</th></tr></thead><tbody>`;
+          for (const [method, percentage] of Object.entries(plan)) {
+            html += `<tr><td>${method.replace(/_/g, ' ')}</td><td><strong>${percentage}%</strong></td></tr>`;
+          }
+          html += `</tbody></table></div>`;
+          return html;
+        };
+
+        // Format metrics
+        const formatMetrics = () => {
+          let html = `<div class="row">`;
+          
+          if (sustainability && Object.keys(sustainability).length > 0) {
+            html += `<div class="col-md-6 mb-3"><div class="card border-success"><div class="card-header bg-success text-white"><strong>Sustainability Impact</strong></div><div class="card-body">`;
+            for (const [key, value] of Object.entries(sustainability)) {
+              let label = key.replace(/_/g, ' ');
+              let displayValue = value;
+              if (key.includes('%') || key.includes('Percent') || key.includes('Reduction')) {
+                displayValue = `${value}%`;
+              } else if (key.includes('Score') && typeof value === 'number') {
+                displayValue = value.toFixed(1);
+              }
+              html += `<p class="mb-2"><strong>${label}:</strong> <span class="text-success">${displayValue}</span></p>`;
+            }
+            html += `</div></div></div>`;
+          }
+
+          if (economic && Object.keys(economic).length > 0) {
+            html += `<div class="col-md-6 mb-3"><div class="card border-primary"><div class="card-header bg-primary text-white"><strong>Economic Impact</strong></div><div class="card-body">`;
+            for (const [key, value] of Object.entries(economic)) {
+              const label = key.replace(/_/g, ' ').replace(/EST/g, '');
+              let displayValue = value;
+              if (key.includes('Revenue') && typeof value === 'number') {
+                displayValue = `₹${value.toLocaleString('en-IN')}`;
+              } else if (typeof value === 'number') {
+                displayValue = value.toString();
+              }
+              html += `<p class="mb-2"><strong>${label}:</strong> <span class="text-primary">${displayValue}</span></p>`;
+            }
+            html += `</div></div></div>`;
+          }
+          
+          html += `</div>`;
+          return html;
+        };
 
         resultDiv.innerHTML = `
-          <h6><strong>Input:</strong></h6>
-          <pre>${JSON.stringify(inputObj, null, 2)}</pre>
-          <h6><strong>Initial Plan:</strong></h6>
-          <pre>${JSON.stringify(initial, null, 2)}</pre>
-          <h6><strong>Optimizer Output (full, as in terminal):</strong></h6>
-          <pre>${JSON.stringify(fullFinal, null, 2)}</pre>
-          <h6><strong>Optimizer Reasoning:</strong></h6>
-          <p>${reasoning}</p>
+          <div class="card mb-3">
+            <div class="card-header bg-light"><strong>📋 Input Information</strong></div>
+            <div class="card-body">${formatInput()}</div>
+          </div>
+
+          <div class="card mb-3">
+            <div class="card-header bg-info text-white"><strong>🌱 Initial Plan</strong></div>
+            <div class="card-body">
+              ${formatAllocation(initialPlan, 'Initial Plan')}
+              <div class="mt-2">
+                <strong>Reasoning:</strong> <em>${initialReasoning}</em><br>
+                <strong>Confidence:</strong> ${initial?.confidence ? (initial.confidence * 100).toFixed(1) + '%' : 'N/A'}
+              </div>
+            </div>
+          </div>
+
+          <div class="card mb-3">
+            <div class="card-header bg-success text-white"><strong>✨ Optimized Plan</strong></div>
+            <div class="card-body">
+              ${formatAllocation(final, 'Optimized Plan')}
+              ${formatMetrics()}
+              <div class="mt-3">
+                <strong>Optimizer Reasoning:</strong><br>
+                <p class="text-muted">${reasoning}</p>
+                <strong>Confidence Score:</strong> <span class="badge bg-success">${(confidence * 100).toFixed(1)}%</span>
+              </div>
+            </div>
+          </div>
         `;
 
-        // Draw chart
+        // Draw pie chart for allocation
         const ctx = document.getElementById('planChart').getContext('2d');
-        new Chart(ctx, {
-          type: 'bar',
+        
+        // Destroy existing chart if it exists
+        if (planChartInstance) {
+          planChartInstance.destroy();
+          planChartInstance = null;
+        }
+        
+        // Format labels for better readability
+        const labels = Object.keys(final).map(key => key.replace(/_/g, ' '));
+        const values = Object.values(final);
+        
+        // Color scheme for allocation methods
+        const colors = {
+          'Compost': '#28a745',           // Green
+          'Biochar': '#8b4513',            // Brown
+          'Biogas': '#007bff',             // Blue
+          'Feed or Storage': '#ffc107',    // Yellow
+          'Feed_or_Storage': '#ffc107'      // Yellow (fallback)
+        };
+        
+        // Map colors based on original keys
+        const backgroundColors = Object.keys(final).map(key => {
+          const cleanKey = key.replace(/_/g, ' ');
+          return colors[key] || colors[cleanKey] || '#dc3545';
+        });
+        
+        planChartInstance = new Chart(ctx, {
+          type: 'pie',
           data: {
-            labels: Object.keys(final),
+            labels: labels,
             datasets: [{
               label: 'Residue Allocation (%)',
-              data: Object.values(final),
-              backgroundColor: ['#28a745','#007bff','#ffc107','#dc3545']
+              data: values,
+              backgroundColor: backgroundColors,
+              borderColor: '#ffffff',
+              borderWidth: 2
             }]
           },
-          options: { scales: { y: { beginAtZero: true, max: 100 } } }
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            aspectRatio: 1.5,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  padding: 10,
+                  font: {
+                    size: 11
+                  }
+                }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const label = context.label || '';
+                    const value = context.parsed || 0;
+                    return `${label}: ${value}%`;
+                  }
+                }
+              }
+            }
+          }
         });
 
       } catch (err) {
